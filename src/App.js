@@ -1,87 +1,99 @@
-import React ,{useEffect, useState}from 'react';
-import {fabric} from 'fabric';//http://fabricjs.com/articles/
+import React, { useRef, useReducer, useMemo, useCallback } from 'react';
+import UserList from './UserList';
+import CreateUser from './CreateUser';
+import useInputs from './hooks/useInputs';
 
+function countActiveUsers(users) {
+  console.log('활성 사용자 수를 세는중...');
+  return users.filter(user => user.active).length;
+}
 
-function App(){
-  const[canvas,setCanvas]=useState('');
-  useEffect(()=>{
-    setCanvas(initCanvas());
-  },[])
-  
-  const initCanvas=()=>(
-    new fabric.Canvas('canvas',{
-      height:800, width:800, backgroundColor:'grey'
-    })
-  )
-
-  const addRect= function(){
-    //TODO: Circle,Ellipse,Line,Polygon, 동작안되는 것들 확인필요
-    //TODO: 객체크기 유동적으로 마우스연동이용해서 drawingmode?
-    //FIXME: 객체크기를 바꾸고 다시 생성시, delete와 여러번 막 누를시 버그
-    var rect=new fabric.Rect({
-      width:50,height:50
-    })
-    canvas.add(rect) //add막누르면 버그걸림
-  }
-
-  const delItem= function(){
-    let activeObjects=canvas.getActiveObjects();
-    //TODO: getObject? discardActiveObject(no render) 왜안쓰는지
-    if(activeObjects.length){
-      activeObjects.forEach(function(object) {
-        canvas.remove(object)
-      });
+const initialState = {
+  users: [
+    {
+      id: 1,
+      username: 'velopert',
+      email: 'public.velopert@gmail.com',
+      active: true
+    },
+    {
+      id: 2,
+      username: 'tester',
+      email: 'tester@example.com',
+      active: false
+    },
+    {
+      id: 3,
+      username: 'liz',
+      email: 'liz@example.com',
+      active: false
     }
-  }
+  ]
+};
 
-  const changeColor= function(){
-    //FIXME: 크기를 바꿔야만 색깔적용이 된다. 렌더링문제? select나 함수를 바꿔보자
-    //TODO: renderAll 뭔소용?
-    let activeObjects=canvas.getActiveObjects();
-    if(activeObjects.length){
-      activeObjects.forEach(function(object) {
-        object.fill = '#34eb77';
-        //canvas.renderAll(); 
-      });
-    }
+function reducer(state, action) {
+  switch (action.type) {
+    case 'CREATE_USER':
+      return {
+        users: state.users.concat(action.user)
+      };
+    case 'TOGGLE_USER':
+      return {
+        ...state,
+        users: state.users.map(user =>
+          user.id === action.id ? { ...user, active: !user.active } : user
+        )
+      };
+    case 'REMOVE_USER':
+      return {
+        ...state,
+        users: state.users.filter(user => user.id !== action.id)
+      };
+    default:
+      return state;
   }
-  //색깔팔레트=>https://codepen.io/Elite4Web/pen/xQJQKg
+}
 
-  const[imgURL,setImgURL]= useState('');
-  const addImg=(e,url,canvi)=>{
-    e.preventDefault();//?
-    new fabric.Image.fromURL(url, img => {
-      img.scale(0.75);
-      canvi.add(img);
-      canvi.renderAll();
-      setImgURL('');  
+// UserDispatch 라는 이름으로 내보내줍니다.
+export const UserDispatch = React.createContext(null);//전역값공유 깊은곳에 값 전달 prop대신
+//reducer로 관리하면 dispatch를 Context API로 사용하여 전역적으로 사용할수 있게 된다.
+
+function App() {
+  const [{ username, email }, onChange, onReset] = useInputs({
+    username: '',
+    email: ''
+  });
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const nextId = useRef(4);
+
+  const { users } = state;
+
+  const onCreate = useCallback(() => {
+    dispatch({
+      type: 'CREATE_USER',
+      user: {
+        id: nextId.current,
+        username,
+        email
+      }
     });
-  }
+    onReset();
+    nextId.current += 1;
+  }, [username, email, onReset]);
 
-  //TODO: 직렬화 역직렬화
-  //TODO: 이미지 불러오기
-  
-  
-
-  return(
-    <div>
-      <h1>Fabric.js on React </h1>
-      <button onClick={addRect}> Add Rect </button>
-      <button onClick={delItem}>Delete</button>
-      <button onClick={changeColor}>Change Color</button>
-      <form onSubmit={e => addImg(e, imgURL, canvas)}>
-        <div>
-          <input 
-            type="text" 
-            value={imgURL} 
-            onChange={ e => setImgURL(e.target.value)} 
-          />
-          <button type="submit">Add Image</button>
-        </div>
-      </form>
-      <canvas id="canvas" />
-    </div>
-  )
+  const count = useMemo(() => countActiveUsers(users), [users]);
+  return (
+    <UserDispatch.Provider value={dispatch}>
+      <CreateUser
+        username={username}
+        email={email}
+        onChange={onChange}
+        onCreate={onCreate}
+      />
+      <UserList users={users} />
+      <div>활성사용자 수 : {count}</div>
+    </UserDispatch.Provider>
+  );
 }
 
 export default App;

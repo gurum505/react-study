@@ -1,0 +1,170 @@
+import React ,{useEffect, useState}from 'react';
+import {fabric} from 'fabric';
+
+//출처:
+//색깔팔레트=>https://codepen.io/Elite4Web/pen/xQJQKg
+//freedrawing=> http://fabricjs.com/freedrawing , https://jsfiddle.net/Fidel90/7kmf3jz2/
+//공식문서=>http://fabricjs.com/articles/
+
+//TODO: 화면 꾸미기
+
+function App(){
+  const[canvas,setCanvas]=useState('');
+  useEffect(()=>{
+    setCanvas(initCanvas());
+  },[])
+
+  const[color,setColor]=useState('#000000');
+  useEffect(()=>{
+    if(canvas.isDrawingMode ===true){
+      canvas.freeDrawingBrush.color = color;
+    }
+  },[color]);
+  
+  const initCanvas = ()=>(
+    new fabric.Canvas('canvas',{
+      height:800, width:800, backgroundColor:'grey'
+    })
+  )
+
+  const addRect = function(canvas){
+    //TODO: 마우스올리면 선택할수 있도록 반응형으로
+    //TODO: 객체크기 유동적으로 마우스연동이용해서 drawingmode?
+    //객체크기를 바꾸고 다시 생성시, delete와 여러번 막 누를시 버그=>canvas를 param으로 받고 해결
+    var rect=new fabric.Rect({
+      width:50,height:50
+    })
+    var triangle=new fabric.Triangle({
+      width:50,height:50
+    })
+    var circle=new fabric.Circle({
+      radius:50
+    })
+
+    canvas.add(circle)
+    canvas.renderAll(); 
+  }
+
+  const delItem = function(canvas){
+    let activeObjects=canvas.getActiveObjects();
+    //discardActiveObject(no render) 
+    if(activeObjects.length){
+      activeObjects.forEach(function(object) {
+        canvas.remove(object)
+      });
+    }
+    canvas.discardActiveObject(); //selection box 제거
+    canvas.renderAll();
+  }
+
+  const changeColor = function(canvas){
+    //renderAll: Necessary when making changes to the canvas that needs to be rendered on the DOM
+    //requestrenderall: in order to see the handles when one objects is active.
+    
+    let activeObjects = canvas.getActiveObjects();
+    if(activeObjects.length){
+      activeObjects.forEach(function(object) {
+        object.set("fill", color);
+        //색깔변경 즉시 render=>canvas의 default method인 set을 쓰니 해결
+        canvas.renderAll();
+      });
+    }
+  }
+
+  
+  const[imgURL,setImgURL]= useState('paste img src on internet');
+  const addImg = (e,url,canvi)=>{
+    e.preventDefault();//?
+    new fabric.Image.fromURL(url, img => {
+      img.scale(0.75);
+      canvi.add(img);
+      canvi.renderAll();
+      setImgURL('paste img src on internet');  
+    });
+  }
+
+  const loadImg = (e) => {
+		const reader = new FileReader();
+		const file = e.target.files[0];
+		reader.onload = () => {
+			new fabric.Image.fromURL(reader.result, (image) => {
+				image.scale(0.75);
+				canvas.add(image);
+				canvas.renderAll();
+			});
+		};
+		reader.readAsDataURL(file);
+	};
+
+  const addText = function(){
+    let text=new fabric.IText("Hello World!",{
+      fontFamily:'sans-serif', size:'15pt'
+    })
+    canvas.add(text)
+  }
+
+  const freedrawing = function(canvas,color){
+    //TODO: 크기 조정? text랑연동
+    canvas.isDrawingMode=true;
+    canvas.freeDrawingBrush.color = color;
+    canvas.freeDrawingBrush.width = 3;
+    canvas.freeDrawingCursor="default";
+    
+  }
+
+  const stopFreedrawing = function(canvas){
+    canvas.isDrawingMode = false;
+  }
+  const onClear = function(){
+    let allObjects=canvas.getObjects();
+    if(allObjects.length){
+      allObjects.forEach(function(object) {
+        canvas.remove(object)
+      });
+    }
+  }
+
+  //TODO: 직렬화 역직렬화
+  const serialize=function(){
+
+  }
+
+  const unSerialize=function(){
+
+  }
+  //TODO: 지우개 =>http://fabricjs.com/erasing
+  //TODO: 복사 붙여넣기 =>http://fabricjs.com/copypaste
+  //TODO: 필터?
+  //TODO: zoom? =>http://fabricjs.com/fabric-intro-part-5
+ 
+
+  return(
+    <div>
+      <h1>Fabric.js on React </h1>
+      <button onClick={()=>(addRect(canvas))}> Add Rect </button>
+      <button onClick={()=>(delItem(canvas))}>Delete</button>
+      <button onClick={()=>changeColor(canvas)}>Change Color</button>
+      <form onSubmit={e => addImg(e, imgURL, canvas)}>
+        <div>
+          <input 
+            type="text" 
+            value={imgURL} 
+            onChange={ e => setImgURL(e.target.value)} 
+          />
+          <button type="submit">Add Image</button>
+        </div>
+      </form>
+      <input type="file" id="imgLoader" onChange={file=>loadImg(file)}/>
+      <button onClick={addText}>Add Text</button>
+      <input type="color" id="colors" onChange={(e)=>setColor(e.target.value)}/>
+      <button onClick={()=>freedrawing(canvas,color)}>Free Draw</button>
+      <button onClick={()=>stopFreedrawing(canvas)}>Stop Free Draw</button>
+      <button> 직렬화</button>
+      <button> 역직렬화</button>
+      <button onClick={onClear}>Clear</button>
+      <canvas id="canvas" />
+    </div>
+  )
+}
+
+export default App;

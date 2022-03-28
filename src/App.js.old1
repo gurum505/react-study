@@ -1,0 +1,67 @@
+//https://react.vlpt.us/basic/03-first-component.html
+import React,{useRef} from 'react';
+import Hello from './Hello.js'
+import './App.css'
+import Wrapper from './Wrapper.js'
+import InputSample from './InputSample.js';
+import InputSample2 from './InputSample2.js';
+import UserList from './UserList.js';
+import CreatUser from './CreateUser.js';
+
+
+function App(){
+  const name="react";
+  const style={
+      backgroundColor:'black',
+      color:'red',
+      fontSize:24,
+      padding:'1rem'
+  }
+  const users=[
+    {
+        id:1,
+        username:'velopert',
+        email:'public.veloper@gmail.com'
+    },
+    {
+        id:2,
+        username:'tester',
+        email:'tester@gmail.com'
+    },
+    {
+        id:3,
+        username:'liz',
+        email:'liz@gmail.com'
+    },
+  ];
+  
+  const nextId=useRef(4);
+  const onCreate=()=>{
+    
+    nextId.current+=1 //current = 값을 조회
+  }
+  //리액트 컴포넌트에서의 상태는 상태를 바꾸는 함수를 호출하고 나서 그 다음 렌더링 이후로 업데이트 된 상태를 조회 할 수 있다
+  //component는 state나 props가 변경될때마다 호출된다.(re-렌더링)
+  //호출될때마다 초기화문구도 그대로 실행
+  //useRef로 만들어진 객체는 전역저장소에 저장되어 호출되도 업데이트한 내역이 초기화되지 않음
+
+  return(
+    <div>
+      <Wrapper>
+      <Hello name="seho" color="red" isSpecial={true}/>{/* name변수를 hello에 전달*/}
+      <Hello/>
+      </Wrapper>
+      
+      <div style={style}>{name}</div>
+      <div className='gray-box'></div>{/*TODO: gray-box는 왜 camelCase아닌데? */}
+
+      <InputSample />
+      <InputSample2 />
+
+      <UserList users={users}/>
+      <CreatUser />
+    </div>
+  )
+}
+
+export default App;

@@ -1,0 +1,114 @@
+import React, { useRef, useState,useMemo,useCallback } from 'react';
+import UserList from './UserList.js';
+import CreateUser from './CreateUser.js';
+
+
+function countActiveUsers(users){
+  //TODO: 왜 input의 변화에 이게 업데이트가 된지? 렌더링은 그게 속한 component만 일어나는게 아닌가
+  //input값 변화=> email이라는 props of CreateUser => APP 컴포넌트의 state변경 =>렌더링
+  //input값이 변할때도 컴포넌트가 리렌더링되므로 불필요하게 호출된다.
+  console.log("활성사용자 수를 세는 중");
+  return users.filter(user=>user.active).length;
+}
+
+
+function App() {
+  const [inputs, setInputs] = useState({
+    username: '',
+    email: ''
+  });
+  const { username, email } = inputs;
+
+  //APP안의 onChange onCreate등은 렌더링될때마다 새로만들어진다. 그걸 막는게 usecallback
+  //usememo의 변형형, 2번째 parameter에 꼭 사용하는 상태 or props를 넣어줘야한다.
+  const onChange = useCallback(e => {
+    const { name, value } = e.target;
+    setInputs(inputs=>({
+      ...inputs,
+      [name]: value
+    }));
+  },[]);
+  //의존성 제거 전:
+  /**
+   * setInputs({
+      ...inputs,
+      [name]: value
+    });
+    },[inputs]);
+   */
+
+  const [users,setUsers] = useState([
+    {
+      id: 1,
+      username: 'velopert',
+      email: 'public.velopert@gmail.com',
+      active:true
+    },
+    {
+      id: 2,
+      username: 'tester',
+      email: 'tester@example.com',
+      active:false
+    },
+    {
+      id: 3,
+      username: 'liz',
+      email: 'liz@example.com',
+      active:false
+    }
+  ]);
+  
+  const nextId = useRef(4);
+  const onCreate = useCallback(() => {
+
+    const user={
+      id:nextId.current,
+      username, //TODO: 왜 username={username}이 아닌지 모르겠다.
+      email
+    }
+    //const는 재할당 안된다. 값변경은 가능
+    //배열은 불변성을 유지해야하기 때문에 push등은 쓰면 안된다. spread나 concat사용필요
+    setUsers(users=>([...users,user]));//setUsers([users,concat(user)]); 도 가능.
+    
+    setInputs({
+      username: '',
+      email: ''
+    });
+    nextId.current += 1;
+  },[username,email]);
+  //TODO: inputs는 안되는가?, username과 email도 의존성을 없앨수는 없는가?
+
+  //함수형 업데이트: state에 어떤 값이 아니라 prev=>prev+1같은 함수를 써 업데이트를 최신으로 유지할수 있게된다.
+  //const handleToggle = useCallback((): void => setIsClicked(!isClicked), [isClicked]);
+  //const handleToggle = useCallback((): void => setIsClicked(prev => !prev), []);
+  //setUsers or setInputs는 항상 user , inputs를 최신으로 해주기때문에 이렇게 할수 있다.
+  //의존성 삭제
+
+  const onRemove = useCallback((id)=>{
+    //array의 불변성을 지키면서 삭제하는 방법으로 filter를 사용한다.
+    //filter : 조건에 맞는것만 뽑아내 새로 배열을 만든다.
+    setUsers(users=>(users.filter(user => user.id !== id)));
+  },[]);
+
+  const onToggle=useCallback((id)=>{
+    setUsers(users=>(users.map(user=>user.id ===id ? {...user,active:!user.active}:user
+      )));
+  },[]);
+
+  //const count=countActiveUsers(users); //input값이 변경될때도 불필요하게 리렌더링된다.
+  const count = useMemo(() => countActiveUsers(users), [users]);//users가 변경될때만 다시계산 성능최적화용
+  return (
+    <>
+      <CreateUser
+        username={username}
+        email={email}
+        onChange={onChange}
+        onCreate={onCreate}
+      />
+      <UserList users={users} onRemove={onRemove} onToggle={onToggle}/>
+      <div>활성사용자수:{count}</div>
+    </>
+  );
+}
+
+export default App;
